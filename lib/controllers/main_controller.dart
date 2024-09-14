@@ -3,67 +3,110 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 
+import '../models/current_weather_model.dart';
+import '../models/hourly_weather_model.dart';
 import '../services/api_services.dart';
 
 class MainController extends GetxController {
   @override
   void onInit() async {
-    await getUserLocation();
-    currentWeatherData = getCurrentWeather(latitude.value, longitude.value);
-    hourlyWeatherData = getHourlyWeather(latitude.value, longitude.value);
-    weatherData = getWeather(latitude.value, longitude.value);
-    address = await getAddress(latitude.value, longitude.value);
     super.onInit();
+    
+    await getUserLocation(); // Wait for user location
+    await fetchWeatherData(); // Fetch weather data after getting location
   }
 
-  getAddress(lat, long) async {
-    List<Placemark> placeMark = await placemarkFromCoordinates(lat, long);
-    Placemark place = placeMark[0];
-    var city = place.subLocality;
-    return city;
+  // Fetch weather data and update relevant variables
+  Future<void> fetchWeatherData() async {
+    try {
+      // Fetch current weather
+      currentWeatherData = await getCurrentWeather(latitude.value, longitude.value);
+      if (currentWeatherData == null) {
+        throw Exception("Failed to fetch current weather data");
+      }
+
+      // Fetch hourly weather
+      hourlyWeatherData = await getHourlyWeather(latitude.value, longitude.value);
+      if (hourlyWeatherData == null) {
+        throw Exception("Failed to fetch hourly weather data");
+      }
+
+      // Fetch one call weather data (if applicable)
+      weatherData = await getWeather(latitude.value, longitude.value);
+      if (weatherData == null) {
+        throw Exception("Failed to fetch one call weather data");
+      }
+
+      // Fetch address
+      address = await getAddress(latitude.value, longitude.value);
+      if (address == null) {
+        throw Exception("Failed to fetch address");
+      }
+
+      // Set data loaded flag
+      isloaded.value = true;
+
+    } catch (e) {
+      // Handle errors gracefully
+       return null;
+    }
   }
 
-  var isDark = false.obs;
+  // Get address based on coordinates
+  Future<String?> getAddress(lat, long) async {
+    try {
+      List<Placemark> placeMark = await placemarkFromCoordinates(lat, long);
+      Placemark place = placeMark[0];
+      var city = place.subLocality;
+      return city;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  var isDark = true.obs;
   dynamic currentWeatherData;
   dynamic hourlyWeatherData;
   dynamic weatherData;
   dynamic address;
+  dynamic address2;
 
   var latitude = 0.0.obs;
   var longitude = 0.0.obs;
-
   var isloaded = false.obs;
 
+  // Method to change theme
   changeTheme() {
     isDark.value = !isDark.value;
     Get.changeThemeMode(isDark.value ? ThemeMode.dark : ThemeMode.light);
   }
 
-  getUserLocation() async {
-    bool isLocationEnabled;
-    LocationPermission userPermission;
+  // Get user location and update latitude and longitude
+  Future<void> getUserLocation() async {
+    bool isLocationEnabled = await Geolocator.isLocationServiceEnabled();
 
-    isLocationEnabled = await Geolocator.isLocationServiceEnabled();
     if (!isLocationEnabled) {
-      return Future.error("Location is not enabled");
+      return Future.error("Location services are disabled");
     }
 
-    userPermission = await Geolocator.checkPermission();
-    if (userPermission == LocationPermission.deniedForever) {
-      return Future.error("Permission is denied forever");
-    } else if (userPermission == LocationPermission.denied) {
-      userPermission = await Geolocator.requestPermission();
-      if (userPermission == LocationPermission.denied) {
-        return Future.error("Permission is denied");
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error("Location permission denied");
       }
     }
 
     return await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.high)
-        .then((value) {
-      latitude.value = value.latitude;
-      longitude.value = value.longitude;
-      isloaded.value = true;
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+      ),
+    ).then((position) {
+      latitude.value = position.latitude;
+      longitude.value = position.longitude;
+    }).catchError((e) {
+      return null;
     });
   }
 }

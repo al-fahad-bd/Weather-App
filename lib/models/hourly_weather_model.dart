@@ -1,11 +1,10 @@
-// To parse this JSON data, do
-//
-//     final hourlyWeatherData = hourlyWeatherDataFromJson(jsonString);
-
 import 'dart:convert';
 
 HourlyWeatherData hourlyWeatherDataFromJson(String str) =>
     HourlyWeatherData.fromJson(json.decode(str));
+
+String hourlyWeatherDataToJson(HourlyWeatherData data) =>
+    json.encode(data.toJson());
 
 class HourlyWeatherData {
   HourlyWeatherData({
@@ -31,6 +30,16 @@ class HourlyWeatherData {
             json["list"].map((x) => ListElement.fromJson(x))),
         city: City.fromJson(json["city"]),
       );
+
+  Map<String, dynamic> toJson() => {
+        "cod": cod,
+        "message": message,
+        "cnt": cnt,
+        "list": list != null
+            ? List<dynamic>.from(list!.map((x) => x.toJson()))
+            : null,
+        "city": city?.toJson(),
+      };
 }
 
 class City {
@@ -68,7 +77,7 @@ class City {
   Map<String, dynamic> toJson() => {
         "id": id,
         "name": name,
-        "coord": coord!.toJson(),
+        "coord": coord?.toJson(),
         "country": country,
         "population": population,
         "timezone": timezone,
@@ -112,7 +121,6 @@ class ListElement {
   List<Weather>? weather;
   Clouds? clouds;
   Wind? wind;
-
   DateTime? dtTxt;
 
   factory ListElement.fromJson(Map<String, dynamic> json) => ListElement(
@@ -124,6 +132,17 @@ class ListElement {
         wind: Wind.fromJson(json["wind"]),
         dtTxt: DateTime.parse(json["dt_txt"]),
       );
+
+  Map<String, dynamic> toJson() => {
+        "dt": dt,
+        "main": main?.toJson(),
+        "weather": weather != null
+            ? List<dynamic>.from(weather!.map((x) => x.toJson()))
+            : null,
+        "clouds": clouds?.toJson(),
+        "wind": wind?.toJson(),
+        "dt_txt": dtTxt?.toIso8601String(),
+      };
 }
 
 class Clouds {
@@ -151,10 +170,8 @@ class MainClass {
   });
 
   int? temp;
-
   int? tempMin;
   int? tempMax;
-
   int? humidity;
 
   factory MainClass.fromJson(Map<String, dynamic> json) => MainClass(
@@ -163,6 +180,13 @@ class MainClass {
         tempMax: json["temp_max"].toInt(),
         humidity: json["humidity"],
       );
+
+  Map<String, dynamic> toJson() => {
+        "temp": temp,
+        "temp_min": tempMin,
+        "temp_max": tempMax,
+        "humidity": humidity,
+      };
 }
 
 class Weather {
@@ -172,13 +196,17 @@ class Weather {
   });
 
   int? id;
-
   String? icon;
 
   factory Weather.fromJson(Map<String, dynamic> json) => Weather(
         id: json["id"],
         icon: json["icon"],
       );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "icon": icon,
+      };
 }
 
 class Wind {
